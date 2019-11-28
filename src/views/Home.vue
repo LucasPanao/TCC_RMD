@@ -6,7 +6,7 @@
         <v-banner>
           Não achamos nenhum projeto em sua conta, que tal adicionar um novo ?
           <template v-slot:actions>
-            <v-btn to="/newproject" text color="primary">Adicionar</v-btn>
+            <v-btn @click="dialognewproject = true" text color="primary">Adicionar</v-btn>
           </template>
         </v-banner>
       </div>
@@ -27,10 +27,10 @@
           </v-list-item-avatar>
 
           <v-list-item-content>
-            <v-list-item-title v-html="item.nome"></v-list-item-title>
-            <v-list-item-subtitle v-html="item.empresa"></v-list-item-subtitle>
-            <v-list-item-subtitle v-html="item.responsavel"></v-list-item-subtitle>
-            <v-list-item-subtitle v-html="item.descricao"></v-list-item-subtitle>
+            <v-list-item-title class="font-weight-bold" v-text="item.nome">{{item.nome}} <span class="grey--text body-2">{{item.registrado}}</span></v-list-item-title>
+            <v-list-item-subtitle v-if="item.empresa"><span class='text--primary'>Empresa: {{item.empresa}}</span></v-list-item-subtitle>
+            <v-list-item-subtitle><span class='text--primary'>Responsável: {{item.responsavel}}</span></v-list-item-subtitle>
+            <v-list-item-subtitle v-text="item.descricao"></v-list-item-subtitle>
             <v-list-item-subtitle v-html="item.status"></v-list-item-subtitle>
           </v-list-item-content>
         </v-list-item>
@@ -52,7 +52,7 @@
                 <v-text-field
                   v-model="projectname"
                   :rules="ProjectRule"
-                  :counter="15"
+                  :counter="30"
                   prepend-icon="mdi-bullhorn"
                   label="Nome do Projeto"
                   required
@@ -63,7 +63,7 @@
                 <v-text-field
                   v-model="descricao"
                   :rules="DescRule"
-                  :counter="50"
+                  :counter="150"
                   prepend-icon="mdi-folder-text"
                   label="Descrição"
                   required
@@ -74,7 +74,7 @@
                 <v-text-field
                   v-model="empresa"
                   :rules="EmpresaRule"
-                  :counter="15"
+                  :counter="30"
                   prepend-icon="mdi-briefcase"
                   label="Empresa"
                   required
@@ -85,7 +85,7 @@
                 <v-text-field
                   v-model="responsavel"
                   :rules="RespRule"
-                  :counter="15"
+                  :counter="30"
                   prepend-icon="mdi-account-tie"
                   label="Gerente Responsável"
                   required
@@ -154,6 +154,8 @@ var ArrStatus     = ["<span class='grey--text'>Nenhum risco cadastrado</span>",
                       "<span class='green--text text--accent-3'>Projeto Finalizado</span>"]
 
 import {VMoney} from 'v-money';
+import axios from 'axios';
+import qs from "qs";
 
 export default {
   data: () => ({
@@ -182,17 +184,17 @@ export default {
     /* FORM */
     ProjectRule : [
       v => !!v || "Você precisa especificar um nome",
-      v => v.length <= 15 || "O nome deve ser menor do que 15 caracteres"
+      v => v.length <= 30 || "O nome deve ser menor do que 30 caracteres"
     ],
     DescRule: [
-      v => v.length <= 50 || "Sua descrição precisa ser menor do que 50 caracteres"
+      v => v.length <= 150 || "Sua descrição precisa ser menor do que 150 caracteres"
     ],
     EmpresaRule: [
-      v => v.length <= 15 || "O nome da empresa deve ser menor do que 15 caracteres"
+      v => v.length <= 30 || "O nome da empresa deve ser menor do que 30 caracteres"
     ],
     RespRule: [
       v => !!v || "Você precisa especificar um responsável",
-      v => v.length <= 15 || "O nome do responsável deve ser menor do que 15 caracteres"
+      v => v.length <= 30 || "O nome do responsável deve ser menor do que 30 caracteres"
     ],
     DateRule: [
       v => !!v || "Você precisa selecionar uma data"
@@ -207,13 +209,11 @@ export default {
       this.$router.push('/projectinfo').catch(err => {})
       this.$bus.$emit("openproject", {titulo: nome})
     },
-    async CriarNovoProjeto() {
+    CriarNovoProjeto() {
       if(this.projectname.length > 0 && this.responsavel.length > 0 &&
          this.datadoprojeto > 0 && this.price.length > 0){
-          const response = await $.ajax({
-             type: "POST",
-             url: "https://dl.lucaspanao.ml/data.php",
-             data: {
+           axios.post("https://dl.lucaspanao.ml/data.php",
+              qs.stringify({
                 mode: 3,
                 token: this.$session.get("token"),
                 nomeprojeto: this.projectname,
@@ -222,48 +222,46 @@ export default {
                 responsavel: this.responsavel,
                 dataprojeto: this.datadoprojeto,
                 valordoprojeto: this.price
-          }}, "json");
-
-          if(response.status === "done"){
-            this.dialognewproject = false
-            this.LoadProjectList()
-          }
+              })
+           ).then(response => {
+             if(response.data.status === "done"){
+                this.dialognewproject = false
+                this.LoadProjectList()
+             }
+           })
       }
     },
-    async LoadProjectList() {
-      const resultado = await $.ajax({
-        type: "POST",
-        url: "https://dl.lucaspanao.ml/data.php",
-        data: {
+    LoadProjectList() {
+      axios.post("https://dl.lucaspanao.ml/data.php",
+        qs.stringify({
           token: this.$session.get("token"),
           mode: 2
-        }
-      }, "json");
-      if (resultado.status !== "failed") {
-        let idx = 0;
-        this.items = []
-        resultado.forEach(value => {
-          this.items.push({
-            id: value.id,
-            icon: ArrIcon[value.status], nivel: ArrIconStyle[value.status],
-            nomeclean: value.nome,
-            nome: value.nome + ' <span class="grey--text body-2">'+(new Date(value.registrado * 1000).toLocaleDateString("pt-BR"))+'</span>',
-            empresa: value.empresa ? "<span class='text--primary'>Empresa: "+value.empresa+"</span>":"",
-            responsavel: "<span class='text--primary'>Responsável: "+value.responsavel+"</span>",
-            descricao: value.descricao, 
-            status: ArrStatus[value.status]
+        })
+      ).then(response => {
+        if (response.data.status !== "failed") {
+          this.items = []
+          response.data.forEach((value, index) => {
+            this.items.push({
+              id: value.id,
+              icon: ArrIcon[value.status], nivel: ArrIconStyle[value.status],
+              nomeclean: value.nome,
+              nome: value.nome,
+              registrado: (new Date(value.registrado * 1000).toLocaleDateString("pt-BR")),
+              empresa: value.empresa,
+              responsavel: value.responsavel,
+              descricao: value.descricao, 
+              status: ArrStatus[value.status]
+            });
+
+            if(response.data.length !== index + 1){
+              this.items.push({ divider: true, inset: true });
+            }
           });
-
-          if(Object.keys(resultado).length !== (idx + 1)){
-            this.items.push({ divider: true, inset: true });
-          }
-
-          idx++;
-        });
-      }
+        }
+      })
     }
   },
-  async created() {
+  created() {
     this.$session.remove("projectviewid");
     this.$bus.$emit("openproject", {die: true})
 

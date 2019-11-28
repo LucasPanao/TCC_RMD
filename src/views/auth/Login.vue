@@ -37,8 +37,9 @@
   </v-container>
 </template>
 <script>
-import Vue from "vue";
+import axios from 'axios';
 import router from "vue-router";
+import qs from "qs";
 
 export default {
   name: "login",
@@ -56,35 +57,36 @@ export default {
     loading: false,
     //==== login input =====
     UserRule: [
-      v => /(?!.*[\.\-\_]{2,})^[a-zA-Z0-9\.\-\_]{3,24}$/g.test(v) || 'Remova os caracteres inválidos',
+      v => /(?!.*[\.\-\_]{2,})^[a-zA-Z0-9\.\-\_]{0,25}$/g.test(v) || 'Remova os caracteres inválidos',
       v => v.length <= 20 || "O nome deve ser menor do que 20 caracteres"
     ],
     usuario: "",
     senha: ""
   }),
   methods: {
-    async login() {
+    login() {
       this.loader = "loading";
       if (this.usuario !== null && this.senha !== null) {
-        const response = await $.ajax({
-          type: "POST",
-          url: "https://lucaspanao.ml/dl/login.php",
-          data: {
+        axios.post(`https://lucaspanao.ml/dl/login.php`, 
+          qs.stringify({
             username: btoa(this.usuario),
             password: btoa(this.senha)
+          })
+        ).then(response => {
+          if (response.data.status === "done") {
+            this.$session.start()
+            this.$session.set('token', response.data.token);
+            this.$session.set('userid', response.data.userid);
+            this.$bus.$emit('logged', true);
+            this.$router.push('/home').catch(err => {})
+          } else {
+            this.loader = null;
+            this.snacktext = "Usuário ou senha inválido";
+            this.snackbar = true;
           }
-        },"json");
-        
-        if (response.status === "done") {
-          this.$session.start()
-          this.$session.set('token', response.token);
-          this.$bus.$emit('logged', true);
-          this.$router.push('/home').catch(err => {})
-        } else {
-          this.loader = null;
-          this.snacktext = "Usuário ou senha inválido";
-          this.snackbar = true;
-        }
+        }).catch(e => {
+          console.log(e)
+        })
       }else{
         this.snacktext = "Preencha todos os campos com os seus dados de acesso";
         this.snackbar = true;

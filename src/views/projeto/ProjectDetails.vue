@@ -14,7 +14,7 @@
       <v-col class="text-center" cols="12" sm="12">
         <div class="my-0">
           <v-btn block text><v-icon left>mdi-pencil</v-icon>Alterar as Informações</v-btn>
-          <v-btn block text small color="error"><v-icon left>mdi-delete</v-icon>Deletar o Projeto</v-btn>
+          <v-btn block text color="error" @click="DeletarProjeto"><v-icon left>mdi-delete</v-icon>Deletar o Projeto</v-btn>
         </div>
       </v-col>
     </div>
@@ -44,6 +44,9 @@
   </div>
 </template>
 <script>
+import axios from 'axios';
+import qs from "qs";
+
 export default {
   data() {
       return {
@@ -59,86 +62,89 @@ export default {
       }
   },
   methods: {
-    async checkbox_select(evento) {
-      const resultado = await $.ajax({
-        type: "POST",
-        url: "https://dl.lucaspanao.ml/data.php",
-        data: {
-            projetoid: this.$session.get("projectviewid"),
-            idtarget: evento.target.value,
-            checked: evento.target.checked,
-            token: this.$session.get("token"),
-            mode: 8
+    checkbox_select(evento) {
+      axios.post("https://dl.lucaspanao.ml/data.php",
+        qs.stringify({
+          projetoid: this.$session.get("projectviewid"),
+          idtarget: evento.target.value,
+          checked: evento.target.checked,
+          token: this.$session.get("token"),
+          mode: 8
+        })
+      )
+    },
+    DeletarProjeto() {
+      axios.post("https://dl.lucaspanao.ml/data.php",
+        qs.stringify({
+          projetoid: this.$session.get("projectviewid"),
+          token: this.$session.get("token"),
+          mode: 9
+        })
+      ).then(response => {
+        if(response.data.status === "done") {
+          //sair
+          this.$session.remove("projectviewid");
+          this.$bus.$emit("openproject", {die: true})
+          this.$router.push('/home').catch(err => {});
         }
-      }, "json");
-
-      if(resultado){
-        console.log(resultado);
-      }
+      })
     }
   },
-  async created () {
-      if(this.$session.has("projectviewid")){
-        let resultado = await $.ajax({
-            type: "POST",
-            url: "https://dl.lucaspanao.ml/data.php",
-            data: {
-                idprojeto: this.$session.get("projectviewid"),
-                token: this.$session.get("token"),
-                mode: 4
-            }
-        }, "json");
-
-        if (resultado) {
+  created () {
+    if(this.$session.has("projectviewid")){
+      axios.post("https://dl.lucaspanao.ml/data.php",
+        qs.stringify({
+          idprojeto: this.$session.get("projectviewid"),
+          token: this.$session.get("token"),
+          mode: 4
+        })
+      ).then(response => {
+        if(response.data){
           this.projectinfo.push(
-            { id: 0, nome: "Nome do Projeto", valor: resultado.nome},
-            { id: 1, nome: "Empresa", valor: resultado.empresa ? resultado.empresa:"Nenhuma empresa cadastrada"},
-            { id: 2, nome: "Responsável", valor: resultado.responsavel},
-            { id: 3, nome: "Descrição", valor: resultado.descricao ? resultado.descricao:"Nenhuma descrição cadastrada"},
-            { id: 4, nome: "Valor do Projeto", valor: resultado.valor },
-            { id: 5, nome: "Data do Projeto", valor: new Date(resultado.registrado * 1000).toLocaleDateString("pt-BR")}
+            { id: 0, nome: "Nome do Projeto", valor: response.data.nome},
+            { id: 1, nome: "Empresa", valor: response.data.empresa ? response.data.empresa:"Nenhuma empresa cadastrada"},
+            { id: 2, nome: "Responsável", valor: response.data.responsavel},
+            { id: 3, nome: "Descrição", valor: response.data.descricao ? response.data.descricao:"Nenhuma descrição cadastrada"},
+            { id: 4, nome: "Valor do Projeto", valor: response.data.valor },
+            { id: 5, nome: "Data do Projeto", valor: new Date(response.data.registrado * 1000).toLocaleDateString("pt-BR")}
           )
         }
+      })
 
-        let resultado2 = await $.ajax({
-            type: "POST",
-            url: "https://dl.lucaspanao.ml/data.php",
-            data: {
-                token: this.$session.get("token"),
-                mode: 6
-            }
-        }, "json");
-
-        if (resultado2) {
-          //vai pegar todos os riscos que existirem.
-          resultado2.forEach(elemento => {
+      axios.post("https://dl.lucaspanao.ml/data.php",
+        qs.stringify({
+          token: this.$session.get("token"),
+          userid: this.$session.get("userid"),
+          mode: 6
+        })
+      ).then(response => {
+        if(response.data.length > 0 ){
+          response.data.forEach(elemento => {
             this.listrisco.push({
               idtarget: elemento.id,
               nome: elemento.nome
             });
           });
 
-          let resultado3 = await $.ajax({
-            type: "POST",
-            url: "https://dl.lucaspanao.ml/data.php",
-            data: {
+          axios.post("https://dl.lucaspanao.ml/data.php",
+            qs.stringify({
               token: this.$session.get("token"),
               projeto: this.$session.get("projectviewid"),
               mode: 7
-            }
-          }, "json");
-
-          if(resultado3){
-            if(resultado3.status !== "failed") {
-              resultado3.forEach(item => {
+            })
+          ).then(response => {
+            if(response.data.status !== "failed") {
+              response.data.forEach(item => {
                 this.selected.push(item.risco_id)
               })
             }
-          }
+          })
         }
-      }else{
-        this.$router.push('/home').catch(err => {})
-      } 
+      })
+      
+    }else{
+      this.$router.push('/home').catch(err => {})
+    }
   },
 };
 </script>

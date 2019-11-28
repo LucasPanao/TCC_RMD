@@ -22,8 +22,8 @@
 
     <v-navigation-drawer v-if="logado" v-model="drawer" app fixed>
       <v-list-item>
-        <v-list-item-avatar>
-          <v-img :src="userpic"></v-img>
+        <v-list-item-avatar class="mr-2">
+          <v-icon x-large>mdi-account-circle</v-icon>
         </v-list-item-avatar>
 
         <v-list-item-content>
@@ -60,6 +60,9 @@
   </div>
 </template>
 <script>
+import axios from 'axios';
+import qs from "qs";
+
 export default {
   data() {
     return {
@@ -68,7 +71,6 @@ export default {
       drawer: null,
       username: "carregando...",
       usermail: null,
-      userpic: "https://lucaspanao.ml/dl/assets/img/avatar.jpg",
       items: [
         { title: 'Inicio', icon: 'mdi-monitor-dashboard', local: "/home" },
         { title: 'Lista de Riscos', icon: 'mdi-clipboard-list-outline', local: "/risklist" },
@@ -78,7 +80,7 @@ export default {
         { title: 'Informações do Projeto', icon: 'mdi-folder-information', local: "/projectinfo" },
         { title: 'Novo Risco', icon: 'mdi-timeline-plus', local: "/newrisk" },
         { title: 'Identificação de Riscos', icon: 'mdi-file-document-box-search', local: "/riskidentify"},
-        { title: 'Análise Quantitativa', icon: 'mdi-file-settings-variant', local: "/analiseqt"},
+        { title: 'Análise Quantitativa', icon: 'mdi-file-settings-variant', local: "/analyze"},
         { title: 'Resposta aos Riscos', icon: 'mdi-hammer', local: "/respostarisk"},
         { title: 'Sair do projeto', icon: 'mdi-window-close', local: "/home"},
       ],
@@ -98,24 +100,24 @@ export default {
       if(!resultado){
         this.customtitle = null;
       }else{
-        let self = this
         this.token = this.$session.get("token");
-        const response = $.ajax({
-          type: "POST",
-          url: "https://dl.lucaspanao.ml/data.php",
-          data: { token: this.token, mode: 1 },
-          success: function (response) {
-            if (response.status !== "failed") {
-              self.logado = true;
-              self.username = response.nome;
-              self.usermail = response.email;
-            }else{
-              self.logado = false;
-              self.$session.destroy();
-              self.$router.push('/').catch(err => {})
-            }
+
+        axios.post("https://dl.lucaspanao.ml/data.php", 
+          qs.stringify({
+            token: this.token,
+            mode: 1
+          })
+        ).then(response => {
+          if (response.data.status !== "failed") {
+            this.logado = true;
+            this.username = response.data.nome;
+            this.usermail = response.data.email;
+          }else{
+            this.logado = false;
+            this.$session.destroy();
+            this.$router.push('/').catch(err => {})
           }
-        }, "json");
+        })
       }
     })
 
@@ -133,22 +135,22 @@ export default {
         this.$router.push('/home').catch(err => {})
 
       this.token = this.$session.get("token");
-
-      const response = await $.ajax({
-        type: "POST",
-        url: "https://dl.lucaspanao.ml/data.php",
-        data: { token: this.token, mode: 1 }
-      }, "json");
-
-      if (response.status !== "failed") {
-        this.logado = true;
-        this.username = response.nome;
-        this.usermail = response.email;
-      }else{
-        this.logado = false;
-        this.$session.destroy();
-        this.$router.push('/').catch(err => {})
-      }
+      axios.post("https://dl.lucaspanao.ml/data.php", 
+        qs.stringify({
+          token: this.token, 
+          mode: 1
+        })
+      ).then(response => {
+        if (response.data.status !== "failed") {
+          this.logado = true;
+          this.username = response.data.nome;
+          this.usermail = response.data.email;
+        }else{
+          this.logado = false;
+          this.$session.destroy();
+          this.$router.push('/').catch(err => {})
+        }
+      })
     }
   }
 };

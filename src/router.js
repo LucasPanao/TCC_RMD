@@ -26,11 +26,6 @@ export default new Router({
       component: () => import("./views/Home.vue")
     },
     {
-      path: "/newproject",
-      name: "newproject",
-      component: () => import("./views/NewProject.vue")
-    },
-    {
       path: "/logout",
       name: "logout",
       component: () => import("./views/Logout.vue")
@@ -48,9 +43,19 @@ export default new Router({
       component: () => import("./views/projeto/NewRisk.vue")
     },
     {
+      path: "/riskidentify",
+      name: "riskidentify",
+      component: () => import("./views/projeto/RiskIdentify.vue")
+    },
+    {
       path: "/risklist",
       name: "risklist",
       component: () => import("./views/projeto/RiskList.vue")
+    },
+    {
+      path: "/analyze",
+      name: "analyze",
+      component: () => import("./views/projeto/Analyze.vue")
     }
   ]
 });

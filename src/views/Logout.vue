@@ -12,17 +12,20 @@
   </v-container>
 </template>
 <script>
-export default {
-  async created() {
-    const response = await $.ajax({
-      type: "POST",
-      url: "https://lucaspanao.ml/dl/logout.php",
-      data: { token: this.$session.get("token") }
-    },"json");
+import axios from "axios"
+import qs from "qs"
 
-    this.$bus.$emit('logged', false);
-    this.$session.destroy();
-    this.$router.push('/');
+export default {
+  created() {
+    axios.post("https://lucaspanao.ml/dl/logout.php",
+      qs.stringify({
+        token: this.$session.get("token")
+      })
+    ).then(response => {
+      this.$bus.$emit('logged', false);
+      this.$session.destroy();
+      this.$router.push('/');
+    })
   }
 };
 </script>

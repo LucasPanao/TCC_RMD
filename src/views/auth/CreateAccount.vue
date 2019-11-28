@@ -33,6 +33,9 @@
 </template>
 
 <script>
+import axios from 'axios';
+import qs from "qs";
+
 export default {
     data: () => ({
         //Snackbar
@@ -59,21 +62,17 @@ export default {
         ],
     }),
     methods: {
-        async CreateAcc() {
+        CreateAcc() {
             if (this.$refs.form.validate()) {
-                let ajaxconsulta = await $.ajax({
-                    type: "POST",
-                    url: "https://lucaspanao.ml/dl/register.php",
-                    data: {
+                axios.post("https://lucaspanao.ml/dl/register.php", 
+                    qs.stringify({
                         name: btoa(this.nome),
                         username: btoa(this.usuario),
                         email: btoa(this.email),
                         password: btoa(this.senha)
-                    }
-                },"json");
-
-                if(ajaxconsulta) {
-                    if(ajaxconsulta.status === "done"){
+                    })
+                ).then(response => {
+                    if(response.data.status === "done"){
                         this.snacktext = "Conta criada com sucesso";
                         this.snackbar = true;
                         this.$router.push('/').catch(err => {})
@@ -81,8 +80,9 @@ export default {
                         this.snacktext = "Nome de usuário já está em uso";
                         this.snackbar = true;
                     }
-                    console.log(ajaxconsulta)
-                }
+                }).catch(e => {
+                    console.log(e)
+                })
             }
         }
     },
